@@ -91,6 +91,7 @@ int main(int argc, char* argv[]) {
       meas_package.raw_measurements_ << x, y;
       iss >> timestamp;
       meas_package.timestamp_ = timestamp;
+      // add measurement to list
       measurement_pack_list.push_back(meas_package);
     } else if (sensor_type.compare("R") == 0) {
       // RADAR MEASUREMENT
@@ -107,10 +108,13 @@ int main(int argc, char* argv[]) {
       meas_package.raw_measurements_ << ro, phi, ro_dot;
       iss >> timestamp;
       meas_package.timestamp_ = timestamp;
+      // add measurement to list
       measurement_pack_list.push_back(meas_package);
     }
 
     // read ground truth data to compare later
+    // it is idependent of type of sensor measurement
+    // so read the rest of the line
     float x_gt;
     float y_gt;
     float vx_gt;
@@ -121,6 +125,7 @@ int main(int argc, char* argv[]) {
     iss >> vy_gt;
     gt_package.gt_values_ = VectorXd(4);
     gt_package.gt_values_ << x_gt, y_gt, vx_gt, vy_gt;
+    // add gt vector to list
     gt_pack_list.push_back(gt_package);
   }
 
