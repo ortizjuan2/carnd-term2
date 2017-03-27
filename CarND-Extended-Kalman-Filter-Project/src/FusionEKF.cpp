@@ -31,11 +31,6 @@ FusionEKF::FusionEKF() {
 		  	  0, 0.0009, 0,
 			  0, 0, 0.09;
 
-  /**
-  TODO:
-    * Finish initializing the FusionEKF.
-    * Set the process and measurement noises
-  */
   	VectorXd x_in = VectorXd(4);
 	MatrixXd P_in = MatrixXd(4,4);
 	MatrixXd F_in = MatrixXd(4,4);
@@ -88,12 +83,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    *  Initialization
    ****************************************************************************/
   if (!is_initialized_) {
-    /**
-    TODO:
-      * Create the covariance matrix.
-     **/
+
     // first measurement
-    cout << "EKF: " << endl;
+    //cout << "EKF: " << endl;
     ekf_.x_ = VectorXd(4);
     //ekf_.x_ << 1, 1, 1, 1;
 
@@ -133,15 +125,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    *  Prediction
    ****************************************************************************/
 
-  /**
-   TODO:
-     * Update the state transition matrix F according to the new elapsed time.
-      - Time is measured in seconds.
-     * Update the process noise covariance matrix.
-     * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
-   */
-
-  	const float noise_ax = 9;
+   	const float noise_ax = 9;
   	const float noise_ay = 9;
 
 	float dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;	//dt - expressed in seconds
@@ -171,13 +155,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    *  Update
    ****************************************************************************/
 
-  /**
-   TODO:
-     * Use the sensor type to perform the update step.
-     * Update the state and covariance matrices.
-   */
-
-  if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
 	  Hj_ = tools.CalculateJacobian(ekf_.x_);
 	  ekf_.H_ = Hj_;
@@ -193,6 +171,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   }
 
   // print the output
-  cout << "x_ = " << ekf_.x_ << endl;
-  cout << "P_ = " << ekf_.P_ << endl;
+  //cout << "x_ = " << ekf_.x_ << endl;
+  //cout << "P_ = " << ekf_.P_ << endl;
 }
