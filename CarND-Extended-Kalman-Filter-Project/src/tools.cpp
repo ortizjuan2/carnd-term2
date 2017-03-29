@@ -56,9 +56,9 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
     double vy = x_state(3);
 
     //pre-compute a set of terms to avoid repeated calculation
-    float c1 = px*px+py*py;
-    float c2 = sqrt(c1);
-    float c3 = sqrt(c1*c1*c1);
+    double c1 = px*px+py*py;
+    double c2 = sqrt(c1);
+    double c3 = sqrt(c1*c1*c1);
 
     //check division by zero
     if(fabs(c1) < 0.0001){

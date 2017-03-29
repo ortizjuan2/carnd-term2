@@ -135,9 +135,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     previous_timestamp_ = measurement_pack.timestamp_;
 
 
-    float dt_2 = dt * dt;
-    float dt_3 = dt_2 * dt;
-    float dt_4 = dt_3 * dt;
+    double dt_2 = dt * dt;
+    double dt_3 = dt_2 * dt;
+    double dt_4 = dt_3 * dt;
 
     //Modify the F matrix so that the time is integrated
     ekf_.F_(0, 2) = dt;
