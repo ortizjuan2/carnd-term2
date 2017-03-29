@@ -13,6 +13,7 @@ using std::vector;
  */
 FusionEKF::FusionEKF() {
     is_initialized_ = false;
+    init_stage = 0;
 
     previous_timestamp_ = 0;
 
@@ -52,10 +53,10 @@ FusionEKF::FusionEKF() {
     H_in << 1, 0, 0, 0,
          0, 1, 0, 0;
 
-//    H_laser_ << 1, 0, 0, 0,
- //   		0, 0, 0, 0;
+    H_laser_ << 1, 0, 0, 0,
+    		0, 1, 0, 0;
 
-    H_laser_ = H_in;
+ //   H_laser_ = H_in;
 
     //the initial transition matrix F_
     F_in << 1, 0, 1, 0,
@@ -86,15 +87,18 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     /*****************************************************************************
      *  Initialization
      ****************************************************************************/
-    if (!is_initialized_) {
+     if (!is_initialized_) {
 
+         init_stage += 1;
+
+        if(init_stage == 1){
         // first measurement
         //cout << "EKF: " << endl;
         ekf_.x_ = VectorXd(4);
         //ekf_.x_ << 1, 1, 1, 1;
 
 
-        double py, px, vx, vy;
+        double py, px;
 
 
         if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
@@ -103,10 +107,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
               */
             px = cos(measurement_pack.raw_measurements_[1])*measurement_pack.raw_measurements_[0];
             py = sin(measurement_pack.raw_measurements_[1])*measurement_pack.raw_measurements_[0];
-            //vx = cos(measurement_pack.raw_measurements_[1])*measurement_pack.raw_measurements_[2];
-            //vy = sin(measurement_pack.raw_measurements_[1])*measurement_pack.raw_measurements_[2];
-
-            ekf_.x_ << px, py, vx, vy;
+            ekf_.x_ << px, py, 0, 0;
 
         }
         else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
@@ -119,12 +120,44 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
         }
 
         //ekf_.x_ << px, py, 0, 0;
+        }
+        else if(init_stage > 2){
+
+        double py, px, vx, vy;
+        double dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;	//dt - expressed in seconds
+
+
+        if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+            /**
+              Convert radar from polar to cartesian coordinates and initialize state.
+              */
+            px = cos(measurement_pack.raw_measurements_[1])*measurement_pack.raw_measurements_[0];
+            py = sin(measurement_pack.raw_measurements_[1])*measurement_pack.raw_measurements_[0];
+           // is_initialized_ = true;
+
+        }
+        else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
+            /**
+              Initialize state.
+              */
+            px = measurement_pack.raw_measurements_[0];
+            py = measurement_pack.raw_measurements_[1];
+            
+        }
+
+        vx = (px - ekf_.x_[0])/dt;
+            vy = (py - ekf_.x_[1])/dt;
+            ekf_.x_ << (px + ekf_.x_[0])/2.0, (py + ekf_.x_[1])/2.0, vx, vy;
+
+        
+
+        
+        // done initializing, no need to predict or update
+        is_initialized_ = true;
+        }
 
         previous_timestamp_ = measurement_pack.timestamp_;
 
-
-        // done initializing, no need to predict or update
-        is_initialized_ = true;
         return;
     }
 
@@ -178,6 +211,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     }
 
     // print the output
-    //cout << "x_ = " << ekf_.x_ << endl;
+    cout << "x_ = " << ekf_.x_ << endl;
     //cout << "P_ = " << ekf_.P_ << endl;
 }
