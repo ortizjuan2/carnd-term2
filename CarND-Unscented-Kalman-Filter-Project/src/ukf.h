@@ -83,6 +83,9 @@ public:
   // previous timestamp
   long long previous_timestamp_;
 
+  VectorXd x;
+  MatrixXd P;
+
   /**
    * Constructor
    */
@@ -92,6 +95,8 @@ public:
    * Destructor
    */
   virtual ~UKF();
+
+  void CreateSigmaPointsAug(double dt);
 
   /**
    * ProcessMeasurement
