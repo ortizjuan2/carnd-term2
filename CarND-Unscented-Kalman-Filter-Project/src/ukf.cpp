@@ -24,7 +24,7 @@ UKF::UKF() {
     use_radar_ = true;
 
     // Process noise standard deviation longitudinal acceleration in m/s^2
-    std_a_ = 3.0;
+    std_a_ = 2.8;
 
     // Process noise standard deviation yaw acceleration in rad/s^2
     std_yawdd_ = 0.2;
@@ -36,7 +36,7 @@ UKF::UKF() {
     std_laspy_ = 0.015;
 
     // Radar measurement noise standard deviation radius in m
-    std_radr_ = 0.025;
+    std_radr_ = 0.25;
 
     // Radar measurement noise standard deviation angle in rad
     std_radphi_ = 0.05;
@@ -169,6 +169,7 @@ measurements.
 
     //} //////////////////////************************
 
+
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
         UpdateRadar(measurement_pack);
     }else if(measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
@@ -220,6 +221,7 @@ void UKF::CreateSigmaPointsAug(double dt){
 
     ///* predict sigma points
     //std::cout << "HERE 1" << std::endl;
+
     for(int i=0; i<(2*n_aug_+ 1); i++){
         ///* extract values for better readability
         double px = Xsig_aug(0,i);
@@ -272,7 +274,6 @@ void UKF::CreateSigmaPointsAug(double dt){
 
 
 
-
     }
 /*
     std::cout << "Xsig_pred_" << std::endl;
@@ -290,7 +291,7 @@ void UKF::CreateSigmaPointsAug(double dt){
 /**
  * Predicts sigma points, the state, and the state covariance matrix.
  * @param {double} delta_t the change in time (in seconds) between the last
- * measurement and this one.
+ * measurement and this one.h
  */
 void UKF::Prediction(double dt) {
     /**
@@ -498,9 +499,9 @@ You'll also need to calculate the radar NIS.
 
         // Radar measurement model
         double c1 = sqrt(px*px + py*py);
-        Zsig(0,i) = c1;
-        Zsig(1,i) = atan2(py,px);
-        Zsig(2,i) = (px*v1 + py*v2)/c1;
+        Zsig(0,i) = c1;					// rho
+        Zsig(1,i) = atan2(py,px);		// psi
+        Zsig(2,i) = (px*v1 + py*v2)/c1; // rho_dot
     }
 
     z_pred = VectorXd(n_z);
@@ -577,7 +578,13 @@ You'll also need to calculate the radar NIS.
 
     x_ = x + K * z_diff;
     P_ = P - K*S*K.transpose();
-    //std::cout << "State Updated!" << std::endl;
+    std::cout << "State Updated!" << std::endl;
+    std::cout << x_ << std::endl;
+    std::cout << "......." << std::endl;
+    std::cout << P_ << std::endl;
+
+
+
 
 
 
