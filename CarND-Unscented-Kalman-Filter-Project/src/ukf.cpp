@@ -13,7 +13,7 @@ using std::vector;
  */
 UKF::UKF() {
 
-	previous_timestamp_ = 0;
+    previous_timestamp_ = 0;
 
     is_initialized_ = false;
 
@@ -36,10 +36,10 @@ UKF::UKF() {
     std_laspy_ = 0.015;
 
     // Radar measurement noise standard deviation radius in m
-    std_radr_ = 0.25;
+    std_radr_ = 0.05;
 
     // Radar measurement noise standard deviation angle in rad
-    std_radphi_ = 0.05;
+    std_radphi_ = 0.008;
 
     // Radar measurement noise standard deviation radius change in m/s
     std_radrd_ = 0.1;
@@ -149,30 +149,30 @@ measurements.
     previous_timestamp_ = measurement_pack.timestamp_;
 
     /*
-    std::cout << "x_" << std::endl;
-    std::cout << x_ << std::endl;
-    std::cout << "--------------" << std::endl;
-    std::cout << "P_" << std::endl;
-        std::cout << P_ << std::endl;
-        std::cout << "--------------" << std::endl;
+       std::cout << "x_" << std::endl;
+       std::cout << x_ << std::endl;
+       std::cout << "--------------" << std::endl;
+       std::cout << "P_" << std::endl;
+       std::cout << P_ << std::endl;
+       std::cout << "--------------" << std::endl;
 
 */
 
     //if (dt > 1e-4){
 
 
-        CreateSigmaPointsAug(dt);
+    CreateSigmaPointsAug(dt);
 
-        Prediction(dt);
+    Prediction(dt);
 
-        //std::cout << P << std::endl;
+    //std::cout << P << std::endl;
 
     //} //////////////////////************************
 
 
-    if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+    if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
         UpdateRadar(measurement_pack);
-    }else if(measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
+    }else if(measurement_pack.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
         UpdateLidar(measurement_pack);
     }
 
@@ -258,8 +258,8 @@ void UKF::CreateSigmaPointsAug(double dt){
         yaw_p += 0.5*dt*dt*nu_yawdd;
 
         //TODO: Angle normalization
-              //  while(yaw_p>M_PI) yaw_p-=2.*M_PI;
-               // while(yaw_p<-M_PI) yaw_p+=2.*M_PI;
+        //  while(yaw_p>M_PI) yaw_p-=2.*M_PI;
+        // while(yaw_p<-M_PI) yaw_p+=2.*M_PI;
 
 
         yawd_p += nu_yawdd*dt;
@@ -275,10 +275,10 @@ void UKF::CreateSigmaPointsAug(double dt){
 
 
     }
-/*
-    std::cout << "Xsig_pred_" << std::endl;
-              std::cout << Xsig_pred_ << std::endl;
-              std::cout << "--------------" << std::endl;
+    /*
+       std::cout << "Xsig_pred_" << std::endl;
+       std::cout << Xsig_pred_ << std::endl;
+       std::cout << "--------------" << std::endl;
 
 */
     /////////*********************************
@@ -546,8 +546,8 @@ You'll also need to calculate the radar NIS.
 
         //TODO: Angle normalization when radar measurement
 
-            while(z_diff(1)>M_PI) z_diff(1)-=2.*M_PI;
-            while(z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+        while(z_diff(1)>M_PI) z_diff(1)-=2.*M_PI;
+        while(z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 
 
 
@@ -569,8 +569,8 @@ You'll also need to calculate the radar NIS.
     VectorXd z_diff = measurement_pack.raw_measurements_ - z_pred;
     //TODO: Angle normalization when Radar measurement
 
-        while(z_diff(1)>M_PI) z_diff(1)-=2.*M_PI;
-        while(z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+    while(z_diff(1)>M_PI) z_diff(1)-=2.*M_PI;
+    while(z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 
 
 
@@ -578,10 +578,10 @@ You'll also need to calculate the radar NIS.
 
     x_ = x + K * z_diff;
     P_ = P - K*S*K.transpose();
-    std::cout << "State Updated!" << std::endl;
-    std::cout << x_ << std::endl;
-    std::cout << "......." << std::endl;
-    std::cout << P_ << std::endl;
+    //std::cout << "State Updated!" << std::endl;
+    //std::cout << x_ << std::endl;
+    //std::cout << "......." << std::endl;
+    //std::cout << P_ << std::endl;
 
 
 
