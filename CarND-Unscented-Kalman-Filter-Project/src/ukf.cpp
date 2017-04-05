@@ -24,25 +24,25 @@ UKF::UKF() {
     use_radar_ = true;
 
     // Process noise standard deviation longitudinal acceleration in m/s^2
-    std_a_ = 2.8;
+    std_a_ = 3.1;
 
     // Process noise standard deviation yaw acceleration in rad/s^2
-    std_yawdd_ = 0.2;
+    std_yawdd_ = 1.5;
 
     // Laser measurement noise standard deviation position1 in m
-    std_laspx_ = 0.015;
+    std_laspx_ = 0.01;
 
     // Laser measurement noise standard deviation position2 in m
-    std_laspy_ = 0.015;
+    std_laspy_ = 0.01;
 
     // Radar measurement noise standard deviation radius in m
-    std_radr_ = 0.05;
+    std_radr_ = 0.04;
 
     // Radar measurement noise standard deviation angle in rad
-    std_radphi_ = 0.008;
+    std_radphi_ = 0.9;
 
     // Radar measurement noise standard deviation radius change in m/s
-    std_radrd_ = 0.1;
+    std_radrd_ = 2.0;
 
     /**
 TODO:
@@ -63,15 +63,15 @@ Hint: one or more values initialized above might be wildly off...
 
     // initial covariance matrix
     P_ = MatrixXd(5, 5);
-    /*
+
        P_ << 10, 0, 0, 0, 0,
        0, 10, 0, 0, 0,
        0, 0, 10, 0, 0,
-       0, 0, 0, 10, 0,
-       0, 0, 0, 0, 10;
-       */
+       0, 0, 0, 1000, 0,
+       0, 0, 0, 0, 1000;
 
-    P_.fill(0.);
+
+    //P_.fill(0.);
 
     Xsig_aug = MatrixXd(n_aug_, 2*n_aug_ + 1);
 
@@ -258,8 +258,8 @@ void UKF::CreateSigmaPointsAug(double dt){
         yaw_p += 0.5*dt*dt*nu_yawdd;
 
         //TODO: Angle normalization
-        //  while(yaw_p>M_PI) yaw_p-=2.*M_PI;
-        // while(yaw_p<-M_PI) yaw_p+=2.*M_PI;
+         // while(yaw_p>M_PI) yaw_p-=2.*M_PI;
+         //while(yaw_p<-M_PI) yaw_p+=2.*M_PI;
 
 
         yawd_p += nu_yawdd*dt;
@@ -270,9 +270,6 @@ void UKF::CreateSigmaPointsAug(double dt){
         Xsig_pred_(2,i) = vp;
         Xsig_pred_(3,i) = yaw_p;
         Xsig_pred_(4,i) = yawd_p;
-
-
-
 
     }
     /*
@@ -414,9 +411,6 @@ You'll also need to calculate the lidar NIS.
 
     S += R; // final S matrix
 
-
-
-
     ///* UKF Update
 
     // Create matrix for cross correlation
@@ -498,10 +492,18 @@ You'll also need to calculate the radar NIS.
         double v2 = sin(yaw)*v;
 
         // Radar measurement model
-        double c1 = sqrt(px*px + py*py);
-        Zsig(0,i) = c1;					// rho
-        Zsig(1,i) = atan2(py,px);		// psi
-        Zsig(2,i) = (px*v1 + py*v2)/c1; // rho_dot
+
+        if(px == 0 && py == 0){
+        	Zsig(0,i) = 0;
+        	Zsig(1,i) = 0;		// psi
+        	Zsig(2,i) = 0; // rho_dot
+        }else{
+        	double c1 = sqrt(px*px + py*py);
+        	Zsig(0,i) = c1;					// rho
+        	Zsig(1,i) = atan2(py,px);		// psi
+        	Zsig(2,i) = (px*v1 + py*v2)/c1; // rho_dot
+        }
+
     }
 
     z_pred = VectorXd(n_z);
@@ -582,9 +584,6 @@ You'll also need to calculate the radar NIS.
     //std::cout << x_ << std::endl;
     //std::cout << "......." << std::endl;
     //std::cout << P_ << std::endl;
-
-
-
 
 
 
