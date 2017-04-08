@@ -227,6 +227,13 @@ int main(int argc, char* argv[]) {
     in_file_.close();
   }
 
+  /*
+  cout << "yawd max: " << ukf.yawd_max << endl;
+  cout << "yawd min: " << ukf.yawd_min << endl;
+  cout << "yawd mean: " << ukf.yawd_u/ukf.yawd_n << endl;
+*/
+
   cout << "Done!" << endl;
   return 0;
 }
+

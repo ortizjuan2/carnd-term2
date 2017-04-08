@@ -26,22 +26,20 @@ class UKF {
         ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
         VectorXd x_;
 
-        VectorXd x_p_;
+        ///* augmented sigma points matrix
+        MatrixXd Xsig_aug;
 
         ///* state covariance matrix
         MatrixXd P_;
 
-        MatrixXd P_p_;
+        ///* Augmented state covariance matrix
+        MatrixXd P_aug_;
 
         ///* predicted sigma points matrix
         MatrixXd Xsig_pred_;
 
-        ///* augmented sigma points matrix
-        MatrixXd Xsig_aug_;
-
         ///* time when the state is true, in us
-
-        long long previous_timestamp_;
+        long long time_us_;
 
         ///* Process noise standard deviation longitudinal acceleration in m/s^2
         double std_a_;
@@ -73,10 +71,6 @@ class UKF {
         ///* Augmented state dimension
         int n_aug_;
 
-        int n_z_radar_;
-
-        int n_z_laser_;
-
         ///* Sigma point spreading parameter
         double lambda_;
 
@@ -86,30 +80,8 @@ class UKF {
         ///* the current NIS for laser
         double NIS_laser_;
 
-        MatrixXd R_radar_;
-        MatrixXd R_laser_;
-        //mean predicted measurement
-        VectorXd z_pred_radar_;
-
-
-        //measurement covariance matrix S
-        MatrixXd S_pred_radar_;
-
-        //mean predicted measurement
-        VectorXd z_pred_lidar_;
-
-
-        //measurement covariance matrix S
-        MatrixXd S_pred_lidar_;
-
-        //create matrix for sigma points in measurement space
-        MatrixXd Zsig_lidar_;
-
-        //create matrix for sigma points in measurement space
-        MatrixXd Zsig_radar_;
-
-
-
+        // previous timestamp
+        long long previous_timestamp_;
 
         /**
          * Constructor
@@ -146,20 +118,11 @@ class UKF {
          */
         void UpdateRadar(MeasurementPackage meas_package);
 
-        void AugmentedSigmaPoints(void);
-
-        void SigmaPointPrediction(double delta_t);
-
-        void PredictMeanAndCovariance(void);
-
-        void PredictRadarMeasurement(void);
-        void PredictLidarMeasurement(void);
-
-        void UpdateStateRadar(void);
-        void UpdateStateLidar(void);
-
-        void UpdateStateRadar(MeasurementPackage z);
-        void UpdateStateLidar(MeasurementPackage z);
+        /**
+         * Constrain Angle between -pi and pi
+         * @param angle
+         * return constrained angle
+         */
         double constrainAngle(double ang);
 
 };
