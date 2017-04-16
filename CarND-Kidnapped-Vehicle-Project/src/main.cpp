@@ -9,9 +9,17 @@
 #include <ctime>
 #include <iomanip>
 #include <random>
+#include <fstream>
+#include <sstream>
+
+
+#define DEBUG 0
+
 
 #include "particle_filter.h"
 #include "helper_functions.h"
+
+
 
 using namespace std;
 
@@ -25,10 +33,8 @@ int main() {
 	double max_translation_error = 1; // Max allowable translation error to pass [m]
 	double max_yaw_error = 0.05; // Max allowable yaw error [rad]
 
-
-
 	// Start timer.
-	int start = clock();
+	double start = clock();
 	
 	//Set up parameters here
 	double delta_t = 0.1; // Time elapsed between measurements [sec]
@@ -51,22 +57,75 @@ int main() {
 	normal_distribution<double> N_obs_y(0, sigma_landmark[1]);
 	double n_x, n_y, n_theta, n_range, n_heading;
 	// Read map data
+	/*
+	 *  92.064	-34.777	1
+		61.109	-47.132	2
+		17.42	-4.5993	3
+	 *
+	 * // Set values
+		single_landmark_temp.id_i = id_i;
+		single_landmark_temp.x_f  = landmark_x_f;
+		single_landmark_temp.y_f  = landmark_y_f;
+
+		// Add to landmark list of map:
+		map.landmark_list.push_back(single_landmark_temp);
+	 *
+	 */
 	Map map;
-	if (!read_map_data("data/map_data.txt", map)) {
+	if (!read_map_data("../data/map_data.txt", map)) {
 		cout << "Error: Could not open map file" << endl;
 		return -1;
 	}
 
 	// Read position data
+	/*
+	 *
+	 * 	3.9611 3.0937
+		4.0378 -0.0081013
+		4.1173 0.0055507
+		4.2066 0.011087
+		4.3007 -0.0010223
+		4.4045 -0.0090234
+	 *
+	 *
+	 * 	// Set values
+		meas.velocity = velocity;
+		meas.yawrate = yawrate;
+
+		// Add to list of control measurements:
+		position_meas.push_back(meas);
+
+	 */
 	vector<control_s> position_meas;
-	if (!read_control_data("data/control_data.txt", position_meas)) {
+	if (!read_control_data("../data/control_data.txt", position_meas)) {
 		cout << "Error: Could not open position/control measurement file" << endl;
 		return -1;
 	}
 	
 	// Read ground truth data
+	/*
+	 * 	6.2785 1.9598 0
+		6.6632 2.0825 0.30937
+		7.0554 2.2076 0.30856
+		7.4561 2.3358 0.30912
+		7.8656 2.4671 0.31022
+		8.2852 2.6011 0.31012
+		8.7144 2.7375 0.30922
+		9.1536 2.8763 0.30781
+	 *
+	 *
+	 * // Set values
+		single_gt.x = x;
+		single_gt.y = y;
+		single_gt.theta = azimuth;
+
+		// Add to list of control measurements and ground truth:
+		gt.push_back(single_gt);
+	 *
+	 *
+	 */
 	vector<ground_truth> gt;
-	if (!read_gt_data("data/gt_data.txt", gt)) {
+	if (!read_gt_data("../data/gt_data.txt", gt)) {
 		cout << "Error: Could not open ground truth data file" << endl;
 		return -1;
 	}
@@ -77,11 +136,38 @@ int main() {
 	double total_error[3] = {0,0,0};
 	double cum_mean_error[3] = {0,0,0};
 	
+	/*
+	 *  observations for current time step
+	 *  this is supoused to be the distance from the car to visible lanmarks
+	 *  in car coordenates
+	 *
+	 * 	2.4853 5.6048
+		11.142 -6.5591
+		-19.92 -2.0582
+		1.9234 -22.93
+		13.861 -22.11
+		29.925 12.867
+		-13.407 -36.5
+		30.348 -30.858
+		-36.114 -25.237
+		22.62 -41.714
+		-46.064 -14.575
+	 *
+	 *
+	 * // Set values
+		meas.x = local_x;
+		meas.y = local_y;
+
+		// Add to list of control measurements:
+		observations.push_back(meas);
+
+	 */
+
 	for (int i = 0; i < num_time_steps; ++i) {
 		cout << "Time step: " << i << endl;
 		// Read in landmark observations for current time step.
 		ostringstream file;
-		file << "data/observation/observations_" << setfill('0') << setw(6) << i+1 << ".txt";
+		file << "../data/observation/observations_" << setfill('0') << setw(6) << i+1 << ".txt";
 		vector<LandmarkObs> observations;
 		if (!read_landmark_data(file.str(), observations)) {
 			cout << "Error: Could not open observation file " << i+1 << endl;
@@ -94,6 +180,25 @@ int main() {
 			n_y = N_y_init(gen);
 			n_theta = N_theta_init(gen);
 			pf.init(gt[i].x + n_x, gt[i].y + n_y, gt[i].theta + n_theta, sigma_pos);
+
+#if DEBUG == 1
+			/*
+			 * Output x, y position of particles to disk
+			 */
+			string out_file_name_ = "output.txt";
+			  ofstream out_file_(out_file_name_.c_str(), ofstream::out);
+
+			  out_file_ << gt[i].x << "," << gt[i].y << "\n";
+
+			  for(int i=0; i<pf.particles.size(); i++){
+				out_file_ << pf.particles[i].x << "," << pf.particles[i].y << "\n";
+			  }
+
+			  if (out_file_.is_open()) {
+			      out_file_.close();
+			    }
+#endif
+
 		}
 		else {
 			// Predict the vehicle's next state (noiseless).
@@ -111,7 +216,7 @@ int main() {
 			noisy_observations.push_back(obs);
 		}
 
-		// Update the weights and resample
+		// Update the weights and re-sample
 		pf.updateWeights(sensor_range, sigma_landmark, noisy_observations, map);
 		pf.resample();
 		
@@ -154,7 +259,7 @@ int main() {
 	}
 	
 	// Output the runtime for the filter.
-	int stop = clock();
+	double stop = clock();
 	double runtime = (stop - start) / double(CLOCKS_PER_SEC);
 	cout << "Runtime (sec): " << runtime << endl;
 	
