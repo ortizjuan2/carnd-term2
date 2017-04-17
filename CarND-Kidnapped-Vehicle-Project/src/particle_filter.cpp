@@ -143,13 +143,10 @@ void ParticleFilter::resample() {
 
 	std::default_random_engine int_eng{};
 	std::uniform_int_distribution<> int_distribution{0, num_particles}; // type of engine
-
 	std::default_random_engine real_eng{};
 	std::uniform_real_distribution<> real_distribution{0, 1}; // type of engine
 
-
 	int index = int_distribution(int_eng);
-
 
 	double beta = 0.0;
 	//double nw = max(weights.begin(), weights.end());
