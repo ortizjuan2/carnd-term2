@@ -141,15 +141,19 @@ void ParticleFilter::resample() {
 	// Set of current particles
 	std::vector<Particle> particles_tmp;
 
-	std::default_random_engine eng{};
-	std::uniform_int_distribution<> nump{0, num_particles}; // type of engine
+	std::default_random_engine int_eng{};
+	std::uniform_int_distribution<> int_distribution{0, num_particles}; // type of engine
 
-	std::default_random_engine eng2{};
-	std::uniform_real_distribution<> nump2{0, 1}; // type of engine
+	std::default_random_engine real_eng{};
+	std::uniform_real_distribution<> real_distribution{0, 1}; // type of engine
 
-	int index = nump(eng);
+
+	int index = int_distribution(int_eng);
+
+
 	double beta = 0.0;
 	//double nw = max(weights.begin(), weights.end());
+
 
 	double nw = 0;
 /*
@@ -165,7 +169,7 @@ void ParticleFilter::resample() {
 
 
 	for (int i=0; i<num_particles; i++){
-		beta += nump2(eng2) * 2.0 * nw;
+		beta += real_distribution(real_eng) * 2.0 * nw;
 		while(beta > particles[index].weight){
 			beta -= particles[index].weight;
 			index = (index + 1) % num_particles;
