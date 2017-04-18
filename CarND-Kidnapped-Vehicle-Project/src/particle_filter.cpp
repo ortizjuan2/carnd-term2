@@ -16,7 +16,7 @@
 void ParticleFilter::init(double x, double y, double theta, double sigma_pos[]) {
 
 	// set number of particles
-	num_particles = 100;
+	num_particles = 5;
 
 	/*
 	struct Particle {
@@ -35,7 +35,7 @@ void ParticleFilter::init(double x, double y, double theta, double sigma_pos[]) 
 	std::normal_distribution<double> N_y_init(0, sigma_pos[1]);
 	std::normal_distribution<double> N_theta_init(0, sigma_pos[2]);
 
-	double init_w = 1./num_particles;
+	double init_w = 1.;
 
 	for(int i = 0; i < num_particles; i++){
 		Particle p;
@@ -48,6 +48,8 @@ void ParticleFilter::init(double x, double y, double theta, double sigma_pos[]) 
 	}
 
 	is_initialized = true;
+
+	std::cout << "Init particle x: " << particles[0].x << " y: " << particles[0].y << " w: " << particles[0].weight << std::endl;
 
 }
 
@@ -106,6 +108,8 @@ void ParticleFilter::prediction(double dt, double std_pos[], double v, double ya
 		particles[i].theta = theta;
 	}
 
+	std::cout << "Prediction x:" << particles[0].x << " y: " << particles[0].y << std::endl;
+
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
@@ -129,6 +133,95 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   3.33. Note that you'll need to switch the minus sign in that equation to a plus to account 
 	//   for the fact that the map's y-axis actually points downwards.)
 	//   http://planning.cs.uiuc.edu/node99.html
+
+
+	std::vector<LandmarkObs> observations_transformed;
+	double x, y, distance;
+	double w_norm = 0;
+
+
+	for(int i=0; i<particles.size(); i++){
+		// identify applicable observations and convert them to global coordinates
+		for(int j=0; j<observations.size(); j++){
+		x = observations[j].x;
+		y = observations[j].y;
+		distance = sqrt((x*x)+(y*y));
+		if(distance > sensor_range) continue;
+
+		LandmarkObs meas;
+		//Set values
+		meas.x = x*cos(particles[i].theta) + y*sin(particles[i].theta) + particles[i].x;
+		meas.y = x*sin(particles[i].theta) + y*cos(particles[i].theta) + particles[i].y;
+		observations_transformed.push_back(meas);
+
+		}
+
+		double best_distance;
+		double best_id;
+		double pxy_norm = 1.0/(2*M_PI*std_landmark[0]*std_landmark[1]);
+		double sigma2x = std_landmark[0] * std_landmark[0];
+		double sigma2y = std_landmark[1] * std_landmark[1];
+		double p_final = 1.0;
+		double pxy;
+		for(int i_obs=0; i_obs<observations_transformed.size();i_obs++){
+			best_distance = 999999;
+			best_id = -1;
+			for(int i_map=0; i_map<map_landmarks.landmark_list.size(); i_map++){
+				double d1 = observations_transformed[i_obs].x - map_landmarks.landmark_list[i_map].x_f;
+				double d2 = observations_transformed[i_obs].y - map_landmarks.landmark_list[i_map].y_f;
+				double dist = sqrt((d1*d1) + (d2*d2));
+
+			//	std::cout << "observation: (" << observations_transformed[i_obs].x << ", " << observations_transformed[i_obs].y << ") landmark: (";
+			//	std::cout << map_landmarks.landmark_list[i_map].x_f << ", " << map_landmarks.landmark_list[i_map].y_f << ") dist: " << dist << std::endl;
+
+
+
+				if(dist < best_distance && dist <= 3.0 ){
+					best_distance = dist;
+					best_id = i_map;
+				}
+			}
+			//std::cout << "best: " << best_distance << std::endl << "-----" << std::endl;
+
+			if(best_id != -1){
+				double xu = observations_transformed[i_obs].x - map_landmarks.landmark_list[best_id].x_f;
+				double yu = observations_transformed[i_obs].y - map_landmarks.landmark_list[best_id].y_f;
+				pxy = pxy_norm*exp(-(((xu*xu)/(2*sigma2x))+((yu*yu)/(2*sigma2y))));
+				p_final *= pxy;
+
+				//std::cout << "observation: (" << observations_transformed[i_obs].x << ", " << observations_transformed[i_obs].y << ") landmark: (";
+					//		std::cout << map_landmarks.landmark_list[best_id].x_f << ", " << map_landmarks.landmark_list[best_id].y_f << ") dist: " << dist << std::endl;
+
+						//	std::cout << "Probability: " << pxy << " Cumulative: " << p_final << std::endl;
+			}
+
+
+
+
+		}
+
+		std::cout << "Prob: " << p_final << std::endl;
+
+		if(p_final != 1.0){
+			std::cout << "add p_final" << std::endl;
+		particles[i].weight = p_final;
+		w_norm += p_final;
+		}else{
+			particles[i].weight = 0.0;
+		}
+
+
+
+	}
+
+	//weights normalization
+	std::cout << "W Norm: " << w_norm << std::endl;
+
+	for(int i=0; i<particles.size(); i++){
+		if(w_norm > 0.0)
+			particles[i].weight /= w_norm;
+	}
+
 }
 
 void ParticleFilter::resample() {
@@ -153,17 +246,11 @@ void ParticleFilter::resample() {
 
 
 	double nw = 0;
-/*
-	for(std::vector<double>::iterator p = weights.begin(); p != weights.end()-1; p++){
-		if (nw < (*p))
-			nw = (*p);
-	}
-*/
+
 	for(int i=0; i<particles.size(); i++){
 		if(nw < particles[i].weight)
 			nw = particles[i].weight;
 	}
-
 
 	for (int i=0; i<num_particles; i++){
 		beta += real_distribution(real_eng) * 2.0 * nw;
@@ -177,6 +264,14 @@ void ParticleFilter::resample() {
 	}
 	// set resampled particles
 	particles = particles_tmp;
+
+
+	for (int i=0; i<num_particles; i++){
+			std::cout << particles[i].weight << ", ";
+			}
+	std::cout << std::endl;
+
+
 }
 
 void ParticleFilter::write(std::string filename) {
