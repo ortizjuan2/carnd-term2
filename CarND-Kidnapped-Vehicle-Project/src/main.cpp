@@ -28,7 +28,7 @@ using namespace std;
 int main() {
 	
 	// parameters related to grading.
-	int time_steps_before_lock_required = 100; // number of time steps before accuracy is checked by grader.
+	int time_steps_before_lock_required = 10; // number of time steps before accuracy is checked by grader.
 	double max_runtime = 45; // Max allowable runtime to pass [sec]
 	double max_translation_error = 1; // Max allowable translation error to pass [m]
 	double max_yaw_error = 0.05; // Max allowable yaw error [rad]
@@ -202,6 +202,9 @@ int main() {
 		}
 		else {
 			// Predict the vehicle's next state (noiseless).
+#if DEBUG == 1
+			cout << "Ground truth: (" << gt[i].x << ", " << gt[i].y << ") theta: " << gt[i].theta << endl;
+#endif
 			pf.prediction(delta_t, sigma_pos, position_meas[i-1].velocity, position_meas[i-1].yawrate);
 		}
 		// simulate the addition of noise to noiseless observation data.

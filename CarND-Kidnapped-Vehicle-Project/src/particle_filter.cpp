@@ -13,10 +13,13 @@
 
 #include "particle_filter.h"
 
+
+#define DEBUG 0
+
 void ParticleFilter::init(double x, double y, double theta, double sigma_pos[]) {
 
 	// set number of particles
-	num_particles = 3;
+	num_particles = 100;
 
 	/*
 	struct Particle {
@@ -48,8 +51,9 @@ void ParticleFilter::init(double x, double y, double theta, double sigma_pos[]) 
 	}
 
 	is_initialized = true;
-
+#if DEBUG == 1
 	std::cout << "Init particle x: " << particles[0].x << " y: " << particles[0].y << " w: " << particles[0].weight << std::endl;
+#endif
 
 }
 
@@ -116,7 +120,7 @@ void ParticleFilter::prediction(double dt, double std_pos[], double v, double ya
 		particles[i].theta = N_yaw(gen);
 	}
 
-	std::cout << "Prediction x:" << particles[0].x << " y: " << particles[0].y << std::endl;
+	//std::cout << "Prediction x:" << particles[0].x << " y: " << particles[0].y << std::endl;
 
 }
 
@@ -138,8 +142,9 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 				best_dist = dist;
 				best_id	= predicted[j].id;
 			}
-
-			observations[i].id = best_id;
+			if(best_dist <= 1.0)
+				observations[i].id = best_id;
+			else observations[i].id = -1;
 		}
 
 	}
@@ -175,6 +180,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 		std::vector<LandmarkObs> predicted;
 
+#if DEBUG == 1
+		std::cout << "* Particle (" << x << ", " << y << ") theta: " << (*it_prt).theta << std::endl;
+#endif
+
 		for(std::vector<Map::single_landmark_s>::iterator  it_landmark = map_landmarks.landmark_list.begin(); 
 				it_landmark != map_landmarks.landmark_list.end(); it_landmark++){
 				
@@ -184,13 +193,16 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 				//meas.x = cos_theta*((*it_landmark).x_f - x) + sin_theta*((*it_landmark).y_f - y) + N_x(gen);
 				//meas.y = cos_theta*((*it_landmark).y_f - y) + sin_theta*((*it_landmark).x_f - x) + N_y(gen);
 
-				meas.x = cos_theta*((*it_landmark).x_f - x) + sin_theta*((*it_landmark).y_f - y) + N_x(gen);
-				meas.y = cos_theta*((*it_landmark).y_f - y) + sin_theta*((*it_landmark).x_f - x) + N_y(gen);
+				meas.x = (cos_theta*(*it_landmark).x_f) + (sin_theta*(*it_landmark).y_f) - (cos_theta*x) - (sin_theta*y) + N_x(gen);
+				meas.y = (-sin_theta*(*it_landmark).x_f) + (cos_theta*(*it_landmark).y_f) + (sin_theta*x) - (cos_theta*y) + N_y(gen);
 
 				double dist = sqrt((meas.x*meas.x)+(meas.y*meas.y));
 					
 				if(dist <= sensor_range){
 						predicted.push_back(meas);
+#if DEBUG == 1
+						std::cout << "\tPredicted landmark in range: id[" << meas.id << "] (" << meas.x << ", " << meas.y << ")\n";
+#endif
 					}
 
 				//std::cout << meas.x << " " << meas.y << std::endl;
@@ -202,8 +214,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		//associate observations to landmarks ids.
 
 		dataAssociation(predicted, observations);
+#if DEBUG == 1
+		for( int k = 0; k < observations.size(); k++){
+			std::cout << "\t\tAssociated Obs: id[" << observations[k].id << "] (" << observations[k].x << ", " << observations[k].y << ")\n";
 
-		// TODO: calculate new probabilities and normalize weights
+		}
+#endif
 
 		double new_weight = 1.0;
 		double std_x = std_landmark[0];
@@ -214,36 +230,47 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		double prob;
 
 		for(int i = 0; i < observations.size(); i++){
-			double x = observations[i].x - map_landmarks.landmark_list[observations[i].id-1].x_f;
-			double y = observations[i].y - map_landmarks.landmark_list[observations[i].id-1].y_f;
+			if(observations[i].id != -1){
 
-			//if(x <= 1.0 && y <= 1.0){
-				prob = pnorm*exp(-((x*x)/(2*std_xx) + (y*y)/(2*std_yy)));
+				double obsx = cos_theta*observations[i].x - sin_theta*observations[i].y + x;
+				double obsy = sin_theta*observations[i].x + cos_theta*observations[i].y + y;
+				double xu = obsx - map_landmarks.landmark_list[observations[i].id-1].x_f;
+				double yu = obsy - map_landmarks.landmark_list[observations[i].id-1].y_f;
+
+
+				prob = pnorm*exp(-((xu*xu)/(2*std_xx) + (yu*yu)/(2*std_yy)));
 				new_weight *= prob;
-			//}
-			std::cout << "obs: (" << observations[i].x << ", " << observations[i].y << ") landmark: (" << map_landmarks.landmark_list[observations[i].id-1].x_f << ", "
-					<< map_landmarks.landmark_list[observations[i].id-1].y_f << ")\n";
-			std::cout << "prob: " << prob << std::endl;
-
+#if DEBUG == 1
+			std::cout << "\tprob: " << prob << std::endl;
+#endif
+			}else{
+				new_weight = 0.0;
+				break;
+			}
 		}
 
-		if(new_weight != 1.0){
+
 			(*it_prt).weight = new_weight;
 			weight_norm += new_weight;
-		}else (*it_prt).weight = 0.0;
+
+#if DEBUG == 1
+		std::cout << "New weight: " << new_weight << "\n-------------------\n";
+#endif
 	}
 
 	// Normalize
 
 	for(std::vector<Particle>::iterator it_prt = particles.begin(); it_prt!=particles.end(); it_prt++){
 		(*it_prt).weight = (*it_prt).weight / weight_norm;
+#if DEBUG == 1
+		std::cout << "\t\t\tFinal weights: " << (*it_prt).weight << ", ";
+#endif
 
-		std::cout << (*it_prt).weight << std::endl;
-	
 	}
 
-	std::cout << "-----------" << std::endl;
-
+#if DEBUG == 1
+	std::cout << "\n-----------\n";
+#endif
 
 ///---------------------------------------------------------
 
