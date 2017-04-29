@@ -3,9 +3,15 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+#include <ctime>
+
+#define Debug 1
 
 // for convenience
 using json = nlohmann::json;
+
+// delta t
+std::clock_t t_start, t_end;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -34,13 +40,23 @@ int main()
 
   PID pid;
   // TODO: Initialize the pid variable.
+  pid.Init(0.3,0.001,0.0004);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
+
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
+    	t_end = std::clock();
+
+    double dt = double(t_end - t_start)/CLOCKS_PER_SEC;
+
+#if Debug == 1
+    std::cout << "elapsed time: " << dt << std::endl;
+#endif
+
       auto s = hasData(std::string(data));
       if (s != "") {
         auto j = json::parse(s);
@@ -57,15 +73,32 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
+          pid.d_error = (cte - pid.d_error)/dt;
+          pid.i_error += cte;
+
+          double u = - pid.Kp_*cte - pid.Kd_*pid.d_error - pid.Ki_*pid.i_error;
+          steer_value = u;
+
+#if Debug == 1
+          std::cout << "angle: " << angle << " u value: " << u << " final steering angle: " << steer_value << std::endl;
+#endif
+
+          pid.d_error = cte;
           
-          // DEBUG
+          steer_value = steer_value > 1.0 ? 1.0 : steer_value;
+          steer_value = steer_value < -1.0 ? -1.0 : steer_value;
+
+#if Debug == 1
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+#endif
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+#if Debug == 1
           std::cout << msg << std::endl;
+#endif
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
@@ -73,6 +106,9 @@ int main()
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
+
+      t_start = std::clock();
+
     }
   });
 
@@ -103,6 +139,8 @@ int main()
   int port = 4567;
   if (h.listen(port))
   {
+	t_start = std::clock();
+
     std::cout << "Listening to port " << port << std::endl;
   }
   else
