@@ -5,8 +5,9 @@
 #include <math.h>
 #include <ctime>
 #include <vector>
+#include <cassert>
 
-#define Debug 1
+#define Debug 0
 #define Twiddle 0
 
 
@@ -14,11 +15,11 @@
 std::vector<double> pd(3);
 std::vector<double *> p(3);
 bool twiddle_init = false;
-double best_error;
+double best_error = 0;
 int twiddle_indx = 0;
 int twiddle_level = 0;
 int it = 0;
-int max_it = 100;
+int max_it = 200;
 std::vector<double> twiddle_error;
 #endif
 
@@ -28,7 +29,7 @@ std::vector<double> twiddle_error;
 // for convenience
 using json = nlohmann::json;
 
-// delta t
+// used to calculate delta t
 std::clock_t t_start, t_end;
 
 // For converting back and forth between radians and degrees.
@@ -57,18 +58,16 @@ int main()
     uWS::Hub h;
 
     PID pid;
-    // TODO: Initialize the pid variable.
+    // Initialize the pid variable.
+    // if Twiddle is active initialize using default values
+    // if not then use tuned parameters
 #if Twiddle == 1
-    pid.Init(0.3, 0.001, 0.0004);
-    //pid.Init(0, 0, 0);
+    pid.Init(0.03, 0.0, 0.0001);
     p = {&pid.Kp_, &pid.Kd_, &pid.Ki_};
-    pd = {.01, .0001, .00001};
+    pd = {0.03, 0.000005, 0.00001};
 #else
-    //pid.Init(0.3, 0.001, 0.0004);
-    //pid.Init(0.329701, 0.0038711, 0.000738676);
-    //    pd[0]: 0.00714493 pd[1]: 6.49539e-05 pd[2]: 5.31441e-06
-    pid.Init(0.3199, 0.00116495, 0.0004);
-
+    //tuned parameters
+    pid.Init(0.08, 0.000051, 0.000105474);
 
 #endif
 
@@ -81,6 +80,7 @@ int main()
             {
             t_end = std::clock();
 
+            // calculate delta t
             double dt = double(t_end - t_start)/CLOCKS_PER_SEC;
 
 #if Debug == 1
@@ -92,7 +92,7 @@ int main()
             auto j = json::parse(s);
             std::string event = j[0].get<std::string>();
             if (event == "telemetry") {
-            // j[1] is the data JSON object
+                // j[1] is the data JSON object
                 double cte = std::stod(j[1]["cte"].get<std::string>());
                 double speed = std::stod(j[1]["speed"].get<std::string>());
                 double angle = std::stod(j[1]["steering_angle"].get<std::string>());
@@ -105,7 +105,7 @@ int main()
                  */
 
 #if Twiddle == 1
-                if((pd[0] + pd[1] + pd[2]) > 1e-4){
+                if((pd[0] + pd[1] + pd[2]) > 1e-3){
                     std::cout << "*** Entering Twiddle\n";
                     if(!twiddle_init){
 
@@ -121,6 +121,14 @@ int main()
                             best_error = tmp_error/twiddle_error.size();
                             twiddle_error.clear(); // Remove all elements to start over
                             it = 0;
+                            std::cout << "Best Error at init: " << best_error << std::endl;
+                            pid.p_error = 0;
+                            pid.d_error = 0;
+                            pid.i_error = 0;
+                            std::string msg = "42[\"reset\"]";
+                            ws.send(msg.c_str(), 11, uWS::OpCode::TEXT);
+                            //assert(0);
+
                         }else twiddle_error.push_back(cte);
 
                     }else{
@@ -149,11 +157,33 @@ int main()
                                         twiddle_level = 0;
                                         it = 0;
                                         twiddle_error.clear();
+                                        std::cout << "Best Error at Level 1: " << best_error << std::endl;
+                                        std::cout << "\tpd[0]: " << pd[0] << " pd[1]: " << pd[1] << " pd[2]: " << pd[2] << std::endl;
+                                        std::cout << "\tp[0]: " << (*p[0]) << " p[1]: " << (*p[1]) << " p[2]: " << (*p[2]) << std::endl;
+                                        std::cout << "goto level " << twiddle_level << std::endl;
+                                        //assert(0);
+                                        pid.p_error = 0;
+                                        pid.d_error = 0;
+                                        pid.i_error = 0;
+                                        std::cout << "Best Error at init: " << best_error << std::endl;
+                                        std::string msg = "42[\"reset\"]";
+                                        ws.send(msg.c_str(), 11, uWS::OpCode::TEXT);
+
                                     }else{
                                         (*p[twiddle_indx]) -= 2 * pd[twiddle_indx];
                                         twiddle_level = 2;
                                         it = 0;
                                         twiddle_error.clear();
+                                        std::cout << "\tpd[0]: " << pd[0] << " pd[1]: " << pd[1] << " pd[2]: " << pd[2] << std::endl;
+                                        std::cout << "\tp[0]: " << (*p[0]) << " p[1]: " << (*p[1]) << " p[2]: " << (*p[2]) << std::endl;
+                                        std::cout << "goto level " << twiddle_level << std::endl;
+                                        //assert(0);
+                                        pid.p_error = 0;
+                                        pid.d_error = 0;
+                                        pid.i_error = 0;
+                                        std::cout << "Best Error at init: " << best_error << std::endl;
+                                        std::string msg = "42[\"reset\"]";
+                                        ws.send(msg.c_str(), 11, uWS::OpCode::TEXT);
                                     }
                                 }else twiddle_error.push_back(cte);
 
@@ -174,6 +204,12 @@ int main()
                                         twiddle_level = 0;
                                         it = 0;
                                         twiddle_error.clear();
+                                        pid.p_error = 0;
+                                        pid.d_error = 0;
+                                        pid.i_error = 0;
+                                        std::cout << "Best Error at init: " << best_error << std::endl;
+                                        std::string msg = "42[\"reset\"]";
+                                        ws.send(msg.c_str(), 11, uWS::OpCode::TEXT);
                                     }else{
                                         (*p[twiddle_indx]) += pd[twiddle_indx];
                                         pd[twiddle_indx] *= 0.9;
@@ -181,6 +217,12 @@ int main()
                                         twiddle_indx = (twiddle_indx + 1) % 3;
                                         it = 0;
                                         twiddle_error.clear();
+                                        pid.p_error = 0;
+                                        pid.d_error = 0;
+                                        pid.i_error = 0;
+                                        std::cout << "Best Error at init: " << best_error << std::endl;
+                                        std::string msg = "42[\"reset\"]";
+                                        ws.send(msg.c_str(), 11, uWS::OpCode::TEXT);
                                     }
                                 }
 
@@ -193,12 +235,12 @@ int main()
 
                 }
 #endif
-
+                // calculate differential error
                 pid.d_error = (cte - pid.d_error)/dt;
+                // calculate itegral error
                 pid.i_error += cte;
-
+                // calculate steering value
                 steer_value = - pid.Kp_*cte - pid.Kd_*pid.d_error - pid.Ki_*pid.i_error;
-
 
 #if Debug == 1
                 std::cout << "angle: " << angle << " steer_value deg: " << rad2deg(steer_value) << " final steering angle: " << steer_value << std::endl;
@@ -209,19 +251,22 @@ int main()
                 std::cout << "\tpd[0]: " << pd[0] << " pd[1]: " << pd[1] << " pd[2]: " << pd[2] << std::endl;
                 std::cout << "\tp[0]: " << (*p[0]) << " p[1]: " << (*p[1]) << " p[2]: " << (*p[2]) << std::endl;
 #endif
-
+                // store last cte
                 pid.d_error = cte;
-
+                // normalize steering value
                 steer_value = steer_value > 1.0 ? 1.0 : steer_value;
                 steer_value = steer_value < -1.0 ? -1.0 : steer_value;
 
 #if Debug == 1
-                std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+                std::cout << "CTE: " << cte << " Steering Value: " << steer_value << " speed: " << speed << std::endl;
 #endif
-
+                // send values to simulator
                 json msgJson;
                 msgJson["steering_angle"] = steer_value;
-                msgJson["throttle"] = 0.3;
+                if((cte > fabs(0.6)) && speed > 10.0)
+                    msgJson["throttle"] = 0.0;
+                else
+                    msgJson["throttle"] = .30;
                 auto msg = "42[\"steer\"," + msgJson.dump() + "]";
 #if Debug == 1
                 std::cout << msg << std::endl;
