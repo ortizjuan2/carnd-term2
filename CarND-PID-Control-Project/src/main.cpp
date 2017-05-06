@@ -7,7 +7,7 @@
 #include <vector>
 #include <cassert>
 
-#define Debug 0
+#define Debug 1
 #define Twiddle 0
 
 
@@ -19,7 +19,8 @@ double best_error = 0;
 int twiddle_indx = 0;
 int twiddle_level = 0;
 int it = 0;
-int max_it = 200;
+int max_it = 1000;
+double max_cte = 5.;
 std::vector<double> twiddle_error;
 #endif
 
@@ -62,12 +63,16 @@ int main()
     // if Twiddle is active initialize using default values
     // if not then use tuned parameters
 #if Twiddle == 1
-    pid.Init(0.03, 0.0, 0.0001);
+    //pd[0]: 0.0778083 pd[1]: 0.000473514 pd[2]: 5.78739e-05
+//    p[0]: 0.75079 p[1]: 0.00228351 p[2]: 0.000254954
+
+    pid.Init(0.3, 0.001, 0.0001);
     p = {&pid.Kp_, &pid.Kd_, &pid.Ki_};
-    pd = {0.03, 0.000005, 0.00001};
+    pd = {0.1, 0.001, 0.0001};
 #else
     //tuned parameters
-    pid.Init(0.08, 0.000051, 0.000105474);
+    //pid.Init(0.08, 0.000051, 0.000105474);
+    pid.Init(0.3, 0.000228351, 0.000254954);
 
 #endif
 
@@ -113,6 +118,7 @@ int main()
                         //pid.d_error = cte;
 
                         it++;
+                        //if(it >= max_it || fabs(cte) >= max_cte){
                         if(it >= max_it){
                             twiddle_init = true;
                             double tmp_error = 0;
@@ -144,6 +150,7 @@ int main()
                                 std::cout << "*** Entering case 1\n";
                                 it++;
                                 //twiddle_error.push_back(cte);
+                                //if(it >= max_it || fabs(cte) >= max_cte){
                                 if(it >= max_it){
                                     double tmp_error = 0;
                                     for(int i=0; i<twiddle_error.size(); i++)
@@ -191,6 +198,7 @@ int main()
                             case 2:
                                 std::cout << "*** Entering case 2\n";
                                 it++;
+                                //if(it >= max_it || fabs(cte) >= max_cte){
                                 if(it >= max_it){
                                     double tmp_error = 0;
                                     for(int i=0; i<twiddle_error.size(); i++)
@@ -263,9 +271,9 @@ int main()
                 // send values to simulator
                 json msgJson;
                 msgJson["steering_angle"] = steer_value;
-                if((cte > fabs(0.6)) && speed > 10.0)
-                    msgJson["throttle"] = 0.0;
-                else
+               // if((cte > fabs(0.6)) && speed > 10.0)
+               //     msgJson["throttle"] = 0.0;
+               // else
                     msgJson["throttle"] = .30;
                 auto msg = "42[\"steer\"," + msgJson.dump() + "]";
 #if Debug == 1
